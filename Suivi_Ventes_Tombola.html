@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi Ventes Tombola — Data Analysis Tool</title>
+<style>
+  :root{
+    --navy-deep:#060d1a; --navy:#0b1f3a; --navy-light:#16305a;
+    --gold:#d4af37; --gold-light:#f3d989; --cream:#fbf3df; --ink:#1a1408;
+    --ok:#5e8c61; --warn:#b5533c; --line:#e4ddc9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Poppins','Segoe UI',sans-serif;
+    background:linear-gradient(160deg,var(--navy-deep),var(--navy) 60%,var(--navy-light));
+    color:var(--cream); min-height:100vh; padding:18px 12px 60px;
+  }
+  .wrap{max-width:880px; margin:0 auto;}
+
+  .header-bar{
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    margin-bottom:6px; flex-wrap:wrap;
+  }
+  .logo-circle{
+    width:56px; height:56px; border-radius:50%; overflow:hidden; flex-shrink:0;
+    border:2px solid var(--gold); box-shadow:0 0 0 3px rgba(212,175,55,.15);
+    background:#fff;
+  }
+  .logo-circle img{width:100%; height:100%; object-fit:cover;}
+  .title-block{text-align:center;}
+  h1{font-size:21px; font-weight:800; color:var(--gold-light); margin:0 0 2px;}
+  .sub{font-size:12px; opacity:.75;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin:18px 0 16px;}
+  .kpi-card{
+    background:rgba(255,255,255,.05); border:1px solid rgba(212,175,55,.35); border-radius:12px;
+    padding:12px 8px; text-align:center;
+  }
+  .kpi-icon{font-size:16px; margin-bottom:4px;}
+  .kpi-label{font-size:8.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--gold); font-weight:700;}
+  .kpi-value{font-size:15px; font-weight:800; color:var(--cream); margin-top:3px;}
+
+  .card{background:rgba(255,255,255,.04); border:1px solid rgba(212,175,55,.3); border-radius:14px; padding:16px 18px; margin-bottom:16px;
+    box-shadow:0 4px 14px rgba(0,0,0,.15);}
+  .card h2{font-size:14px; color:var(--gold-light); margin:0 0 12px; font-weight:700; display:flex; align-items:center; gap:6px;}
+  .row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+  .field{flex:1 1 140px;}
+  label{display:block; font-size:10px; color:var(--gold); margin-bottom:4px; font-weight:600;}
+  input, select{
+    width:100%; padding:8px 9px; border-radius:8px; border:1px solid rgba(212,175,55,.4);
+    background:rgba(0,0,0,.3); color:var(--cream); font-size:13px; font-family:inherit;
+  }
+  button{
+    background:linear-gradient(180deg,var(--gold-light),var(--gold)); color:var(--ink); border:none;
+    font-weight:800; font-size:13px; padding:10px 18px; border-radius:24px; cursor:pointer; width:100%;
+  }
+  .msg{font-size:11px; margin-top:6px; text-align:center; min-height:14px;}
+  .msg.ok{color:var(--gold-light);} .msg.err{color:#ff9d8a;}
+
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th,td{padding:6px 5px; text-align:center; border-bottom:1px solid rgba(255,255,255,.08);}
+  th{color:var(--gold); font-size:9.5px; text-transform:uppercase;}
+  td.name-col, th.name-col{text-align:left;}
+  .empty{text-align:center; opacity:.6; font-size:12px; padding:14px 0;}
+
+  .donut-row{display:flex; align-items:center; gap:22px; flex-wrap:wrap; justify-content:center;}
+  .donut-svg{flex-shrink:0;}
+  .donut-center-text{font-size:20px; font-weight:800; fill:var(--gold-light); font-family:'Poppins',sans-serif;}
+  .donut-legend{flex:1; min-width:180px;}
+  .donut-legend-row{display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-bottom:1px dashed rgba(255,255,255,.1);}
+  .donut-legend-row:last-child{border-bottom:none;}
+  .donut-legend-row b{color:var(--gold-light);}
+
+  .hbar-row{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
+  .hbar-name{width:96px; flex-shrink:0; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:11px; color:var(--cream);}
+  .hbar-track{flex:1; background:rgba(255,255,255,.07); border-radius:6px; height:15px; position:relative; overflow:hidden;}
+  .hbar-fill{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+  .hbar-value{width:28px; flex-shrink:0; font-size:11px; font-weight:700; color:var(--gold-light);}
+
+  .share-row{display:flex; align-items:center; gap:22px; flex-wrap:wrap; justify-content:center;}
+  .share-legend{flex:1; min-width:180px;}
+  .share-legend-row{display:flex; align-items:center; gap:8px; font-size:12px; padding:4px 0;}
+  .share-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+  .share-legend-row span.nm{flex:1;}
+  .share-legend-row b{color:var(--gold-light);}
+
+  .evo-wrap{width:100%;}
+  .evo-wrap svg{width:100%; height:auto; display:block;}
+
+  .chart-wrap{position:relative; height:180px;}
+  .trend-row{display:flex; align-items:flex-end; gap:4px; height:110px; padding:0 2px;}
+  .trend-bar{flex:1; background:linear-gradient(180deg,var(--gold-light),var(--gold)); border-radius:3px 3px 0 0; min-height:2px;}
+  .trend-labels{display:flex; gap:4px; padding:0 2px; margin-top:4px;}
+  .trend-labels span{flex:1; text-align:center; font-size:8px; color:var(--gold); opacity:.75; transform:rotate(0deg); white-space:nowrap;}
+
+  .stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .stat{background:rgba(255,255,255,.05); border:1px solid rgba(212,175,55,.3); border-radius:10px; padding:10px 6px; text-align:center;}
+  .stat-label{font-size:9px; text-transform:uppercase; letter-spacing:.4px; color:var(--gold); font-weight:700;}
+  .stat-value{font-size:16px; font-weight:800; color:var(--cream); margin-top:4px;}
+  @media (max-width:480px){ .stats-grid{grid-template-columns:repeat(2,1fr);} }
+
+  .insight-card{
+    display:flex; gap:12px; align-items:flex-start; background:rgba(0,0,0,.22);
+    border-left:3px solid var(--gold); border-radius:8px; padding:11px 14px; margin-bottom:8px; font-size:12.5px; line-height:1.6;
+  }
+  .insight-card:last-child{margin-bottom:0;}
+  .insight-card.ok{border-left-color:var(--ok);}
+  .insight-card.warn{border-left-color:var(--warn);}
+  .insight-icon{font-size:16px; flex-shrink:0; line-height:1.4;}
+  .insight-card b{color:var(--gold-light);}
+
+  .removeBtn{
+    background:none; border:1px solid rgba(255,157,138,.5); color:#ff9d8a; width:22px; height:22px;
+    border-radius:50%; font-size:10px; line-height:1; padding:0; cursor:pointer;
+  }
+  .removeBtn:hover{ background:rgba(255,157,138,.15); }
+  .footer-note{text-align:center; font-size:10.5px; opacity:.55; margin-top:18px; line-height:1.6;}
+  @media (max-width:600px){ .kpi-grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:480px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header-bar">
+    <div class="logo-circle"><img src="data:image/png;base64,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" alt="Jaffna Samayal"></div>
+    <div class="title-block">
+      <h1>Tombola Sales Analytics</h1>
+      <div class="sub">Jaffna Samayal Tombola &nbsp;|&nbsp; Goal: 1,500 tickets &nbsp;|&nbsp; Draw: 30 August 2026</div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-icon">&#127915;</div><div class="kpi-label">Sold</div><div class="kpi-value" id="statSold">0</div></div>
+    <div class="kpi-card"><div class="kpi-icon">&#128176;</div><div class="kpi-label">Revenue</div><div class="kpi-value" id="statRevenue">&euro;0</div></div>
+    <div class="kpi-card"><div class="kpi-icon">&#128230;</div><div class="kpi-label">Remaining</div><div class="kpi-value" id="statRemaining">1500</div></div>
+    <div class="kpi-card"><div class="kpi-icon">&#8987;</div><div class="kpi-label">Days Left</div><div class="kpi-value" id="statDays">--</div></div>
+    <div class="kpi-card"><div class="kpi-icon">&#128200;</div><div class="kpi-label">Avg / Day</div><div class="kpi-value" id="statAvg">0</div></div>
+    <div class="kpi-card"><div class="kpi-icon">&#128101;</div><div class="kpi-label">Sellers</div><div class="kpi-value" id="statSellers">0</div></div>
+  </div>
+
+  <div class="card">
+    <h2>&#127919; Goal Progress</h2>
+    <div class="donut-row">
+      <svg class="donut-svg" width="150" height="150" viewBox="0 0 150 150">
+        <circle cx="75" cy="75" r="62" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16"/>
+        <circle id="donutProgress" cx="75" cy="75" r="62" fill="none" stroke="url(#donutGrad)" stroke-width="16"
+                stroke-dasharray="0 389.6" stroke-linecap="round" transform="rotate(-90 75 75)"/>
+        <defs>
+          <linearGradient id="donutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f3d989"/>
+            <stop offset="100%" stop-color="#d4af37"/>
+          </linearGradient>
+        </defs>
+        <text x="75" y="70" text-anchor="middle" class="donut-center-text" id="donutPct">0%</text>
+        <text x="75" y="90" text-anchor="middle" fill="#cbb98a" font-size="9" font-family="Poppins,sans-serif">of goal</text>
+      </svg>
+      <div class="donut-legend">
+        <div class="donut-legend-row"><span>Tickets sold</span><b id="legendSold">0</b></div>
+        <div class="donut-legend-row"><span>Tickets remaining</span><b id="legendRemaining">1,500</b></div>
+        <div class="donut-legend-row"><span>Goal</span><b>1,500</b></div>
+        <div class="donut-legend-row"><span>Revenue so far</span><b id="legendRevenue">&euro;0</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>&#10133; Add New Seller</h2>
+    <div class="row">
+      <div class="field"><label>Your Name</label><input type="text" id="sellerName" placeholder="e.g. Kumar Selvam"></div>
+      <div class="field"><label>Phone Number (optional)</label><input type="text" id="sellerPhone" placeholder="06 12 34 56 78"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Tickets Given to Seller</label><input type="number" min="0" id="sellerAllocated" placeholder="e.g. 50"></div>
+      <div class="field"><label>Start Date</label><input type="date" id="sellerStartDate"></div>
+      <div class="field"><label>Start Time</label><input type="time" id="sellerStartTime"></div>
+    </div>
+    <button id="addSellerBtn">Add Seller</button>
+    <div class="msg" id="sellerMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>&#128222; Log Daily Sale</h2>
+    <div class="row">
+      <div class="field" style="flex:1 1 200px;">
+        <label>Select Seller</label>
+        <select id="saleSeller"><option value="">-- loading sellers --</option></select>
+      </div>
+      <div class="field"><label>Date</label><input type="date" id="saleDate"></div>
+      <div class="field"><label>Tickets Sold Today</label><input type="number" min="0" id="saleQty" placeholder="0"></div>
+    </div>
+    <button id="saveSaleBtn">Save Entry</button>
+    <div class="msg" id="saleMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>&#127942; Seller Leaderboard</h2>
+    <div id="sellerBarChart" style="margin-bottom:14px;"></div>
+    <div id="leaderboardWrap"><div class="empty">Loading&hellip;</div></div>
+  </div>
+
+  <div class="card">
+    <h2>&#127761; Sales Share by Seller</h2>
+    <div class="share-row" id="shareWrap"><div class="empty">Loading&hellip;</div></div>
+  </div>
+
+  <div class="card">
+    <h2>&#128269; Seller Detail View</h2>
+    <div class="row">
+      <div class="field" style="flex:1 1 240px;">
+        <label>Choose a Seller</label>
+        <select id="detailSeller"><option value="">-- select a seller --</option></select>
+      </div>
+    </div>
+    <div id="detailWrap"><div class="empty">Select a seller above to see their day-by-day breakdown.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>&#128200; Last 14 Days Trend</h2>
+    <div class="trend-row" id="trendRow"></div>
+    <div class="trend-labels" id="trendLabels"></div>
+  </div>
+
+  <div class="card">
+    <h2>&#128201; Cumulative Evolution (toward Goal)</h2>
+    <div class="evo-wrap" id="evoWrap"></div>
+  </div>
+
+  <div class="card">
+    <h2>&#128202; Instant Data Analysis Report</h2>
+    <div class="report-box" id="reportBox">Loading analysis&hellip;</div>
+  </div>
+
+  <div class="card">
+    <h2>&#128197; Full Daily History</h2>
+    <button id="exportBtn" style="margin-bottom:12px;">&#128229; Export Full Report to Excel</button>
+    <div id="historyWrap"><div class="empty">Loading&hellip;</div></div>
+  </div>
+
+  <div class="footer-note">
+    This data is shared &mdash; anyone with this link can view and update it in real time.<br>
+    Each evening, enter the number your seller reports by phone under "Log Daily Sale" &mdash; the report below updates automatically.
+  </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBGJqdH7ipWYnGRDOEk4QDzYGlaXhkvTdY",
+  authDomain: "tombola-2026-6aa6b.firebaseapp.com",
+  projectId: "tombola-2026-6aa6b",
+  storageBucket: "tombola-2026-6aa6b.firebasestorage.app",
+  messagingSenderId: "573318043046",
+  appId: "1:573318043046:web:40df5e325dbaf8d3b5eb67",
+  measurementId: "G-10CJKH0KHG"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+const GOAL = 1500;
+const PRICE = 20;
+const DRAW_DATE = new Date("2026-08-30T00:00:00+02:00");
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function nowTimeStr(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+document.getElementById('sellerStartDate').value = todayStr();
+document.getElementById('sellerStartTime').value = nowTimeStr();
+document.getElementById('saleDate').value = todayStr();
+
+function uid(){ return 's_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
+
+async function loadSellers(){
+  try{
+    const snap = await getDoc(doc(db, "tombola", "sellers"));
+    return snap.exists() && snap.data().list ? snap.data().list : [];
+  }catch(e){ console.error(e); return []; }
+}
+async function saveSellers(list){
+  try{
+    await setDoc(doc(db, "tombola", "sellers"), { list: list });
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+const DELETE_PASSWORD = 'ALBATROSS';
+function checkPassword(actionLabel){
+  const p = prompt('Type the password to confirm — ' + actionLabel + ':');
+  if(p === null) return false; // cancelled
+  if(p !== DELETE_PASSWORD){ alert('Wrong password. Nothing was deleted.'); return false; }
+  return true;
+}
+
+async function deleteSalesEntry(key){
+  try{
+    const sales = await loadSales();
+    delete sales[key];
+    const ok = await saveSales(sales);
+    if(!ok) throw new Error('delete failed');
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+
+async function removeSeller(id){
+  try{
+    const sellers = await loadSellers();
+    const next = sellers.filter(s => s.id !== id);
+    const ok = await saveSellers(next);
+    if(!ok) throw new Error('remove failed');
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+async function loadSales(){
+  try{
+    const snap = await getDoc(doc(db, "tombola", "sales"));
+    return snap.exists() && snap.data().map ? snap.data().map : {};
+  }catch(e){ console.error(e); return {}; }
+}
+async function saveSales(map){
+  try{
+    await setDoc(doc(db, "tombola", "sales"), { map: map });
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+
+
+function populateSellerDropdown(sellers){
+  const sel = document.getElementById('saleSeller');
+  const detailSel = document.getElementById('detailSeller');
+  if(sellers.length === 0){
+    sel.innerHTML = '<option value="">-- add a seller first --</option>';
+    detailSel.innerHTML = '<option value="">-- add a seller first --</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">-- select seller --</option>' +
+    sellers.map(s => '<option value="'+s.id+'">'+s.name+'</option>').join('');
+  const prevDetail = detailSel.value;
+  detailSel.innerHTML = '<option value="">-- select a seller --</option>' +
+    sellers.map(s => '<option value="'+s.id+'">'+s.name+'</option>').join('');
+  if(prevDetail) detailSel.value = prevDetail;
+}
+
+function computeStats(sellers, sales){
+  const bySeller = {};
+  sellers.forEach(s => bySeller[s.id] = 0);
+  const byDate = {};
+  let total = 0;
+  Object.keys(sales).forEach(key => {
+    const parts = key.split('|');
+    const sellerId = parts[0], date = parts[1];
+    const qty = Number(sales[key]) || 0;
+    total += qty;
+    bySeller[sellerId] = (bySeller[sellerId] || 0) + qty;
+    byDate[date] = (byDate[date] || 0) + qty;
+  });
+  return { bySeller, byDate, total };
+}
+
+function daysBetween(a, b){
+  return Math.round((b - a) / (1000*60*60*24));
+}
+
+function renderDashboard(sellers, sales){
+  const { bySeller, byDate, total } = computeStats(sellers, sales);
+  const pct = Math.min(100, Math.round((total/GOAL)*1000)/10);
+  const revenue = total * PRICE;
+  const remaining = Math.max(0, GOAL - total);
+  const today = new Date();
+  const daysLeft = Math.max(0, daysBetween(today, DRAW_DATE));
+
+  document.getElementById('statSold').textContent = total;
+  document.getElementById('statRevenue').textContent = '\u20ac' + revenue.toLocaleString('en-US');
+  document.getElementById('statRemaining').textContent = remaining;
+  document.getElementById('statDays').textContent = daysLeft;
+
+  const numActiveDaysKpi = Object.keys(byDate).length;
+  document.getElementById('statAvg').textContent = numActiveDaysKpi > 0 ? (total/numActiveDaysKpi).toFixed(1) : '0';
+  document.getElementById('statSellers').textContent = sellers.length;
+
+  const donutCircumference = 389.6; // 2 * PI * r(62)
+  const donutFilled = (pct/100) * donutCircumference;
+  document.getElementById('donutProgress').setAttribute('stroke-dasharray', donutFilled.toFixed(1) + ' ' + donutCircumference);
+  document.getElementById('donutPct').textContent = pct + '%';
+  document.getElementById('legendSold').textContent = total.toLocaleString('en-US');
+  document.getElementById('legendRemaining').textContent = remaining.toLocaleString('en-US');
+  document.getElementById('legendRevenue').textContent = '\u20ac' + revenue.toLocaleString('en-US');
+
+  // Leaderboard (+ ranked list reused by the bar chart and share donut below)
+  const lbWrap = document.getElementById('leaderboardWrap');
+  const ranked = sellers.map(s => {
+    const sold = bySeller[s.id] || 0;
+    const allocated = Number(s.allocated) || 0;
+    const remaining = Math.max(0, allocated - sold);
+    const pctSold = allocated > 0 ? Math.round((sold/allocated)*1000)/10 : null;
+    return { id: s.id, name: s.name, joined: s.startDate || '--', sold, allocated, remaining, pctSold };
+  }).sort((a,b) => b.sold - a.sold);
+  if(sellers.length === 0){
+    lbWrap.innerHTML = '<div class="empty">No sellers added yet. Add your first seller above.</div>';
+  } else {
+    let html = '<table><thead><tr><th class="name-col">Seller</th><th>Allocated</th><th>Sold</th><th>Remaining</th><th>% Sold</th><th>Joined</th><th></th></tr></thead><tbody>';
+    ranked.forEach(r => {
+      const pctStr = r.pctSold === null ? '&mdash;' : r.pctSold + '%';
+      html += '<tr><td class="name-col">'+r.name+'</td><td>'+(r.allocated||'&mdash;')+'</td><td>'+r.sold+'</td><td>'+(r.allocated>0? r.remaining : '&mdash;')+'</td><td>'+pctStr+'</td><td>'+r.joined+'</td><td><button class="removeBtn" data-id="'+r.id+'" data-name="'+r.name+'" title="Remove this seller">&#10005;</button></td></tr>';
+    });
+    html += '</tbody></table>';
+    lbWrap.innerHTML = html;
+  }
+  renderSellerBarChart(ranked);
+  renderSalesShare(ranked, total);
+
+  // 14-day trend
+  const trendRow = document.getElementById('trendRow');
+  const trendLabels = document.getElementById('trendLabels');
+  const days = [];
+  for(let i=13; i>=0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const maxVal = Math.max(1, ...days.map(d => byDate[d] || 0));
+  trendRow.innerHTML = days.map(d => {
+    const v = byDate[d] || 0;
+    const h = Math.round((v/maxVal)*100);
+    return '<div class="trend-bar" style="height:'+Math.max(h,2)+'%" title="'+d+': '+v+'"></div>';
+  }).join('');
+  trendLabels.innerHTML = days.map(d => '<span>'+d.slice(5)+'</span>').join('');
+  renderEvolutionChart(byDate, days);
+
+  // History table — one row per individual entry, so any single wrong entry can be removed
+  const histWrap = document.getElementById('historyWrap');
+  const allKeys = Object.keys(sales).sort(); // chronological for correct running cumulative
+  if(allKeys.length === 0){
+    histWrap.innerHTML = '<div class="empty">No entries yet.</div>';
+  } else {
+    let cum = 0;
+    const rows = allKeys.map(key => {
+      const parts = key.split('|');
+      const seller = sellers.find(s => s.id === parts[0]);
+      const qty = Number(sales[key]) || 0;
+      cum += qty;
+      return { key, name: seller ? seller.name : 'Unknown seller', date: parts[1], qty, cum, orphan: !seller };
+    }).reverse(); // show most recent first
+    let html = '<table><thead><tr><th class="name-col">Seller</th><th>Date</th><th>Tickets</th><th>Cumulative</th><th></th></tr></thead><tbody>';
+    rows.forEach(r => {
+      const nameCell = r.orphan ? '<span style="color:#ff9d8a">'+r.name+'</span>' : r.name;
+      html += '<tr><td class="name-col">'+nameCell+'</td><td>'+r.date+'</td><td>'+r.qty+'</td><td>'+r.cum+'</td><td><button class="removeBtn removeEntryBtn" data-key="'+r.key+'" data-label="'+r.name+' \u2014 '+r.date+' ('+r.qty+' tickets)" title="Delete this entry">&#10005;</button></td></tr>';
+    });
+    html += '</tbody></table>';
+    histWrap.innerHTML = html;
+  }
+
+  // Instant analysis report
+  renderReport(sellers, bySeller, byDate, total, daysLeft);
+}
+
+const CHART_COLORS = ['#d4af37','#8fb3e8','#e07a5f','#81b29a','#f2cc8f','#c08497','#6fa8dc','#b08968'];
+
+// Bar chart: tickets sold per seller (horizontal bars, sorted highest first)
+function renderSellerBarChart(ranked){
+  const wrap = document.getElementById('sellerBarChart');
+  if(!wrap) return;
+  if(ranked.length === 0){ wrap.innerHTML = ''; return; }
+  const maxSold = Math.max(1, ...ranked.map(r => r.sold));
+  wrap.innerHTML = ranked.map(r => {
+    const pct = Math.max(2, Math.round((r.sold/maxSold)*100));
+    return '<div class="hbar-row">'
+      + '<div class="hbar-name" title="'+r.name+'">'+r.name+'</div>'
+      + '<div class="hbar-track"><div class="hbar-fill" style="width:'+pct+'%"></div></div>'
+      + '<div class="hbar-value">'+r.sold+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+// Multi-segment donut: each seller's share of total tickets sold (top 6 + "Others")
+function renderSalesShare(ranked, total){
+  const wrap = document.getElementById('shareWrap');
+  if(!wrap) return;
+  if(ranked.length === 0 || total === 0){
+    wrap.innerHTML = '<div class="empty">No sales logged yet.</div>';
+    return;
+  }
+  const top = ranked.slice(0, 6);
+  const othersSold = ranked.slice(6).reduce((s,r) => s + r.sold, 0);
+  const segments = top.filter(r => r.sold > 0).map((r,i) => ({ name: r.name, value: r.sold, color: CHART_COLORS[i % CHART_COLORS.length] }));
+  if(othersSold > 0) segments.push({ name: 'Others', value: othersSold, color: '#5a6272' });
+
+  const R = 62, C = 2 * Math.PI * R;
+  let offset = 0;
+  const circles = segments.map(seg => {
+    const frac = seg.value / total;
+    const len = frac * C;
+    const circle = '<circle cx="75" cy="75" r="'+R+'" fill="none" stroke="'+seg.color+'" stroke-width="16" '
+      + 'stroke-dasharray="'+len.toFixed(1)+' '+(C-len).toFixed(1)+'" '
+      + 'stroke-dashoffset="'+(-offset).toFixed(1)+'" transform="rotate(-90 75 75)"/>';
+    offset += len;
+    return circle;
+  }).join('');
+
+  const svg = '<svg class="donut-svg" width="150" height="150" viewBox="0 0 150 150">'
+    + '<circle cx="75" cy="75" r="'+R+'" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16"/>'
+    + circles
+    + '<text x="75" y="70" text-anchor="middle" class="donut-center-text">'+total+'</text>'
+    + '<text x="75" y="90" text-anchor="middle" fill="#cbb98a" font-size="9" font-family="Poppins,sans-serif">sold</text>'
+    + '</svg>';
+
+  const legend = '<div class="share-legend">' + segments.map(seg => {
+    const pct = Math.round((seg.value/total)*1000)/10;
+    return '<div class="share-legend-row"><span class="share-dot" style="background:'+seg.color+'"></span><span class="nm">'+seg.name+'</span><b>'+seg.value+' ('+pct+'%)</b></div>';
+  }).join('') + '</div>';
+
+  wrap.innerHTML = svg + legend;
+}
+
+// Cumulative evolution line/area chart — running total across the last 14 days
+function renderEvolutionChart(byDate, days){
+  const wrap = document.getElementById('evoWrap');
+  if(!wrap) return;
+  const beforeWindow = Object.keys(byDate).filter(d => d < days[0]).reduce((s,d) => s + (byDate[d]||0), 0);
+  let cum = beforeWindow;
+  const points = days.map(d => { cum += (byDate[d]||0); return cum; });
+
+  const W = 600, H = 150, padL = 34, padB = 20, padT = 12, padR = 10;
+  const maxY = Math.max(1, ...points);
+  const xAt = i => padL + (i/(days.length-1)) * (W-padL-padR);
+  const yAt = v => padT + (1 - v/maxY) * (H-padT-padB);
+
+  const linePts = points.map((v,i) => xAt(i)+','+yAt(v)).join(' ');
+  const areaPts = 'M'+xAt(0)+','+yAt(points[0])+' L'+points.map((v,i) => xAt(i)+','+yAt(v)).join(' L')+' L'+xAt(points.length-1)+','+(H-padB)+' L'+xAt(0)+','+(H-padB)+' Z';
+  const dots = points.map((v,i) => '<circle cx="'+xAt(i)+'" cy="'+yAt(v)+'" r="3" fill="#f3d989"/>').join('');
+  const labels = days.map((d,i) => (i % 2 === 0 ? '<text x="'+xAt(i)+'" y="'+(H-4)+'" text-anchor="middle" font-size="8" fill="#d4af37" opacity="0.75">'+d.slice(5)+'</text>' : '')).join('');
+  const yLabelStart = '<text x="'+(padL-6)+'" y="'+(H-padB)+'" text-anchor="end" font-size="8" fill="#d4af37" opacity="0.75">'+beforeWindow+'</text>';
+  const yLabelMax = '<text x="'+(padL-6)+'" y="'+(padT+8)+'" text-anchor="end" font-size="8" fill="#d4af37" opacity="0.75">'+maxY+'</text>';
+
+  wrap.innerHTML = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="evoGrad" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="#d4af37" stop-opacity="0.45"/>'
+    + '<stop offset="100%" stop-color="#d4af37" stop-opacity="0"/>'
+    + '</linearGradient></defs>'
+    + '<path d="'+areaPts+'" fill="url(#evoGrad)"/>'
+    + '<polyline points="'+linePts+'" fill="none" stroke="#f3d989" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'
+    + dots + labels + yLabelStart + yLabelMax
+    + '</svg>';
+}
+
+function renderReport(sellers, bySeller, byDate, total, daysLeft){
+  const box = document.getElementById('reportBox');
+  if(total === 0){
+    box.innerHTML = '<div class="line">No sales data yet. Once the first entry is logged, this report will generate automatically.</div>';
+    return;
+  }
+  const dateKeys = Object.keys(byDate).sort();
+  const numActiveDays = dateKeys.length;
+  const avgPerDay = numActiveDays > 0 ? (total / numActiveDays) : 0;
+
+  // Top seller
+  let topSeller = null, topQty = -1;
+  sellers.forEach(s => {
+    const q = bySeller[s.id] || 0;
+    if(q > topQty){ topQty = q; topSeller = s; }
+  });
+
+  // projection
+  const remaining = Math.max(0, GOAL - total);
+  let projectionLine = '';
+  if(avgPerDay > 0 && remaining > 0){
+    const daysNeeded = Math.ceil(remaining / avgPerDay);
+    const projDate = new Date();
+    projDate.setDate(projDate.getDate() + daysNeeded);
+    const projDateStr = projDate.toISOString().slice(0,10);
+    if(daysNeeded <= daysLeft){
+      projectionLine = 'At the current pace, the 1,500-ticket goal is on track to be reached by <b>' + projDateStr + '</b> &mdash; ' + (daysLeft-daysNeeded) + ' day(s) ahead of the 30 August draw. <b>Sales are on pace.</b>';
+    } else {
+      projectionLine = 'At the current pace, reaching the goal would take ' + daysNeeded + ' more day(s) (projected: ' + projDateStr + '), but only ' + daysLeft + ' day(s) remain before the draw. <b>Sales pace needs to increase</b> to hit the target in time.';
+    }
+  }
+
+  const pctDone = Math.round((total/GOAL)*1000)/10;
+
+  let html = '';
+  html += '<div class="line">&#128202; <b>' + total + ' tickets</b> sold so far (' + pctDone + '% of the 1,500-ticket goal), for a total collection of <b>&euro;' + (total*PRICE).toLocaleString('en-US') + '</b>.</div>';
+  if(topSeller){
+    const share = total>0 ? Math.round((topQty/total)*1000)/10 : 0;
+    html += '<div class="line">&#127942; Top performer: <b>' + topSeller.name + '</b> &mdash; ' + topQty + ' tickets (' + share + '% of total sales).</div>';
+  }
+  html += '<div class="line">&#128197; Sales have been logged on ' + numActiveDays + ' day(s), averaging <b>' + avgPerDay.toFixed(1) + ' tickets/day</b>.</div>';
+  if(projectionLine) html += '<div class="line">&#128302; ' + projectionLine + '</div>';
+  html += '<div class="line">&#8987; <b>' + daysLeft + ' day(s)</b> remain until the draw on 30 August 2026.</div>';
+  box.innerHTML = html;
+}
+
+let lastSellers = [];
+let lastSales = {};
+
+async function refreshAll(){
+  const [sellers, sales] = await Promise.all([loadSellers(), loadSales()]);
+  lastSellers = sellers;
+  lastSales = sales;
+  populateSellerDropdown(sellers);
+  renderDashboard(sellers, sales);
+  const detailSel = document.getElementById('detailSeller');
+  if(detailSel.value) renderSellerDetail(detailSel.value);
+  return { sellers, sales };
+}
+
+function renderSellerDetail(sellerId){
+  const wrap = document.getElementById('detailWrap');
+  if(!sellerId){
+    wrap.innerHTML = '<div class="empty">Select a seller above to see their day-by-day breakdown.</div>';
+    return;
+  }
+  const seller = lastSellers.find(s => s.id === sellerId);
+  if(!seller){ wrap.innerHTML = '<div class="empty">Seller not found.</div>'; return; }
+
+  const entries = Object.keys(lastSales)
+    .filter(k => k.startsWith(sellerId + '|'))
+    .map(k => ({ date: k.split('|')[1], qty: Number(lastSales[k]) || 0 }))
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  const sold = entries.reduce((sum,e) => sum + e.qty, 0);
+  const allocated = Number(seller.allocated) || 0;
+  const remaining = Math.max(0, allocated - sold);
+
+  let html = '<div class="stats-grid" style="margin-bottom:12px;">';
+  html += '<div class="stat"><div class="stat-label">Allocated</div><div class="stat-value">'+(allocated || '&mdash;')+'</div></div>';
+  html += '<div class="stat"><div class="stat-label">Sold</div><div class="stat-value">'+sold+'</div></div>';
+  html += '<div class="stat"><div class="stat-label">Remaining</div><div class="stat-value">'+(allocated>0? remaining : '&mdash;')+'</div></div>';
+  html += '<div class="stat"><div class="stat-label">Days Active</div><div class="stat-value">'+entries.length+'</div></div>';
+  html += '</div>';
+
+  if(entries.length === 0){
+    html += '<div class="empty">No sales logged yet for ' + seller.name + '.</div>';
+  } else {
+    let cum = 0;
+    html += '<table><thead><tr><th class="name-col">Date</th><th>Tickets Sold</th><th>Cumulative</th></tr></thead><tbody>';
+    entries.forEach(e => {
+      cum += e.qty;
+      html += '<tr><td class="name-col">'+e.date+'</td><td>'+e.qty+'</td><td>'+cum+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  wrap.innerHTML = html;
+}
+
+document.getElementById('detailSeller').addEventListener('change', (e) => {
+  renderSellerDetail(e.target.value);
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if(typeof XLSX === 'undefined'){
+    alert('Excel export library did not load. Check your internet connection and try again.');
+    return;
+  }
+  const { bySeller, byDate, total } = computeStats(lastSellers, lastSales);
+  const revenue = total * PRICE;
+  const daysLeft = Math.max(0, daysBetween(new Date(), DRAW_DATE));
+
+  const summarySheet = XLSX.utils.aoa_to_sheet([
+    ['Thiruvizha 2026 Tombola \u2014 Sales Report'],
+    ['Generated on', new Date().toLocaleString('en-GB')],
+    [],
+    ['Metric', 'Value'],
+    ['Goal (tickets)', GOAL],
+    ['Total Sold', total],
+    ['Remaining', Math.max(0, GOAL - total)],
+    ['Total Revenue (\u20ac)', revenue],
+    ['Days Left to Draw (30 Aug 2026)', daysLeft],
+  ]);
+
+  const sellerRows = [['Seller', 'Phone', 'Allocated', 'Sold', 'Remaining', '% Sold', 'Start Date', 'Start Time']];
+  lastSellers.forEach(s => {
+    const sold = bySeller[s.id] || 0;
+    const allocated = Number(s.allocated) || 0;
+    const remaining = allocated > 0 ? Math.max(0, allocated - sold) : '';
+    const pctSold = allocated > 0 ? Math.round((sold/allocated)*1000)/10 + '%' : '';
+    sellerRows.push([s.name, s.phone || '', allocated || '', sold, remaining, pctSold, s.startDate || '', s.startTime || '']);
+  });
+  const sellersSheet = XLSX.utils.aoa_to_sheet(sellerRows);
+
+  const dailyRows = [['Seller', 'Date', 'Tickets Sold']];
+  Object.keys(lastSales).sort().forEach(key => {
+    const parts = key.split('|');
+    const seller = lastSellers.find(s => s.id === parts[0]);
+    dailyRows.push([seller ? seller.name : parts[0], parts[1], Number(lastSales[key]) || 0]);
+  });
+  const dailySheet = XLSX.utils.aoa_to_sheet(dailyRows);
+
+  const trendRows = [['Date', 'Tickets Sold That Day']];
+  Object.keys(byDate).sort().forEach(d => trendRows.push([d, byDate[d]]));
+  const trendSheet = XLSX.utils.aoa_to_sheet(trendRows);
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+  XLSX.utils.book_append_sheet(wb, sellersSheet, 'Sellers');
+  XLSX.utils.book_append_sheet(wb, dailySheet, 'Daily Sales Log');
+  XLSX.utils.book_append_sheet(wb, trendSheet, 'Daily Totals');
+
+  const filename = 'Tombola_Sales_Report_' + todayStr() + '.xlsx';
+  XLSX.writeFile(wb, filename);
+});
+
+document.getElementById('addSellerBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('sellerMsg');
+  const name = document.getElementById('sellerName').value.trim();
+  if(!name){ msg.textContent = 'Please enter a seller name.'; msg.className='msg err'; return; }
+  const seller = {
+    id: uid(),
+    name: name,
+    phone: document.getElementById('sellerPhone').value.trim(),
+    allocated: Number(document.getElementById('sellerAllocated').value) || 0,
+    startDate: document.getElementById('sellerStartDate').value || todayStr(),
+    startTime: document.getElementById('sellerStartTime').value || nowTimeStr(),
+  };
+  try{
+    const sellers = await loadSellers();
+    const dupe = sellers.some(s => s.name.trim().toLowerCase() === name.toLowerCase());
+    if(dupe){
+      msg.textContent = 'A seller named "' + name + '" is already on the list \u2014 please use a different name (e.g. add initials or phone) so entries don\u2019t get mixed up.';
+      msg.className = 'msg err';
+      return;
+    }
+    sellers.push(seller);
+    const ok = await saveSellers(sellers);
+    if(!ok) throw new Error('save failed');
+    msg.textContent = seller.name + ' added successfully \u2713';
+    msg.className = 'msg ok';
+    document.getElementById('sellerName').value = '';
+    document.getElementById('sellerPhone').value = '';
+    document.getElementById('sellerAllocated').value = '';
+    await refreshAll();
+  }catch(e){
+    msg.textContent = 'Something went wrong &mdash; please try again.';
+    msg.className = 'msg err';
+  }
+});
+
+document.getElementById('saveSaleBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('saleMsg');
+  const sellerId = document.getElementById('saleSeller').value;
+  const date = document.getElementById('saleDate').value;
+  const qty = Number(document.getElementById('saleQty').value) || 0;
+  if(!sellerId){ msg.textContent = 'Please select a seller.'; msg.className='msg err'; return; }
+  if(!date){ msg.textContent = 'Please choose a date.'; msg.className='msg err'; return; }
+  try{
+    const sales = await loadSales();
+    sales[sellerId + '|' + date] = qty;
+    const ok = await saveSales(sales);
+    if(!ok) throw new Error('save failed');
+    msg.textContent = 'Entry saved ✓';
+    msg.className = 'msg ok';
+    document.getElementById('saleQty').value = '';
+    await refreshAll();
+  }catch(e){
+    msg.textContent = 'Something went wrong &mdash; please try again.';
+    msg.className = 'msg err';
+  }
+});
+
+document.getElementById('leaderboardWrap').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.removeBtn');
+  if(!btn) return;
+  const id = btn.dataset.id, name = btn.dataset.name;
+  if(!confirm('Remove "' + name + '" and keep their logged sales history under "Unknown seller"? This cannot be undone.')) return;
+  if(!checkPassword('remove seller "' + name + '"')) return;
+  btn.disabled = true;
+  const ok = await removeSeller(id);
+  if(ok){ await refreshAll(); } else { alert('Something went wrong removing this seller \u2014 please try again.'); btn.disabled = false; }
+});
+
+document.getElementById('historyWrap').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.removeEntryBtn');
+  if(!btn) return;
+  const key = btn.dataset.key, label = btn.dataset.label;
+  if(!confirm('Delete this entry \u2014 ' + label + '? This cannot be undone.')) return;
+  if(!checkPassword('delete entry for ' + label)) return;
+  btn.disabled = true;
+  const ok = await deleteSalesEntry(key);
+  if(ok){ await refreshAll(); } else { alert('Something went wrong deleting this entry \u2014 please try again.'); btn.disabled = false; }
+});
+
+refreshAll();
+</script>
+</body>
+</html>
